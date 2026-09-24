@@ -55,6 +55,20 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     """
   end
 
+  defp aggregate_load_collection(assigns) do
+    ~H"""
+    <Cinder.collection resource={Cinder.Integration.Artist} url_state={@url_state}>
+      <:col :let={artist} field="album_count" load>{artist.album_count}</:col>
+    </Cinder.collection>
+    """
+  end
+  defp direct_relationship_load_collection(assigns) do
+    ~H"""
+    <Cinder.collection resource={Cinder.Integration.Album} url_state={@url_state}>
+      <:col :let={album} field="artist" load>{album.artist.name}</:col>
+    </Cinder.collection>
+    """
+  end
   setup do
     artist = generate(artist(name: "Test Artist"))
     generate(album(title: "Dirt", artist_id: artist.id))
@@ -105,5 +119,19 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     conn
     |> visit(path)
     |> assert_has("td", text: "Test Artist (display)")
+  end
+  test "load accepts aggregates", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&aggregate_load_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "1")
+  end
+  test "load accepts direct relationships", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&direct_relationship_load_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Test Artist")
   end
 end

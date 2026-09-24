@@ -40,6 +40,10 @@ defmodule Cinder.Integration.Artist do
     has_many(:albums, Cinder.Integration.Album)
   end
 
+  aggregates do
+    count(:album_count, :albums)
+  end
+
   actions do
     defaults([:read, :destroy])
   end
