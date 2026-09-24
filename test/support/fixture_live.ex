@@ -69,6 +69,11 @@ defmodule Cinder.TestLive.Fixture do
   end
 
   @impl true
+  def handle_info({:capture_query, payload}, socket) do
+    {:noreply, assign(socket, :captured_query, payload.query)}
+  end
+
+  @impl true
   def render(assigns) do
     assigns.__render_fun__.(assigns)
   end

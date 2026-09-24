@@ -69,6 +69,44 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     </Cinder.collection>
     """
   end
+  defp duplicate_loads_collection(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:captured_query, fn -> nil end)
+      |> assign(
+        :query,
+        Ash.Query.load(Cinder.Integration.Album, :display_title)
+      )
+
+    ~H"""
+    <Cinder.collection
+      query={@query}
+      url_state={@url_state}
+      infer_loads
+      query_opts={[load: [:display_title]]}
+      on_query_change={:capture_query}
+    >
+      <:col
+        :let={album}
+        field="display_title"
+        load={["display_title", "display_title", "alternate_title"]}
+      >
+        {album.display_title} / {album.alternate_title}
+      </:col>
+    </Cinder.collection>
+
+    <span :if={@captured_query} id="display-title-load-count">
+      {count_calculation_loads(@captured_query, :display_title)}
+    </span>
+    """
+  end
+
+  defp count_calculation_loads(query, calculation_name) do
+    Enum.count(query.calculations, fn {_name, calculation} ->
+      calculation.calc_name == calculation_name
+    end)
+  end
+
   setup do
     artist = generate(artist(name: "Test Artist"))
     generate(album(title: "Dirt", artist_id: artist.id))
@@ -133,5 +171,15 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     conn
     |> visit(path)
     |> assert_has("td", text: "Test Artist")
+  end
+  test "duplicate paths across query, query_opts, infer_loads, and load are deduplicated", %{
+    conn: conn
+  } do
+    path = Cinder.TestLive.Fixture.register(&duplicate_loads_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display) / Dirt (alternate)")
+    |> assert_has("#display-title-load-count", text: "1")
   end
 end
