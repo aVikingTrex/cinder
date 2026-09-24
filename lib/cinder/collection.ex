@@ -650,6 +650,80 @@ defmodule Cinder.Collection do
     end)
   end
 
+  @doc false
+  def normalize_load_requests(columns, infer_loads) do
+    columns
+    |> Enum.reduce({[], %{}}, fn column, {requests, indexes} ->
+      column_field = Map.get(column, :field)
+
+      requests =
+        if infer_loads do
+          {requests, _indexes} =
+            add_load_request(requests, indexes, column_field, :inferred, column_field)
+
+          requests
+        else
+          requests
+        end
+
+      indexes = index_load_requests(requests, indexes)
+
+      column
+      |> Map.get(:load, false)
+      |> explicit_load_paths(column_field)
+      |> Enum.reduce({requests, indexes}, fn path, {requests, indexes} ->
+        add_load_request(requests, indexes, path, :explicit, column_field)
+      end)
+    end)
+    |> elem(0)
+  end
+
+  defp explicit_load_paths(load, column_field) when load in [true, false, nil] do
+    if load == true, do: non_empty_paths([column_field]), else: []
+  end
+
+  defp explicit_load_paths(load, _column_field) when is_binary(load),
+    do: non_empty_paths([load])
+
+  defp explicit_load_paths(load, _column_field) when is_list(load),
+    do: non_empty_paths(load)
+
+  defp explicit_load_paths(_load, _column_field), do: []
+
+  defp non_empty_paths(paths), do: Enum.filter(paths, &(is_binary(&1) and &1 != ""))
+
+  defp add_load_request(requests, indexes, path, source, column_field) do
+    if is_binary(path) and path != "" do
+      key = {path, column_field}
+
+      case Map.fetch(indexes, key) do
+        {:ok, index} when source == :explicit ->
+          {List.replace_at(requests, index, %{
+             path: path,
+             source: source,
+             column_field: column_field
+           }), indexes}
+
+        {:ok, _index} ->
+          {requests, indexes}
+
+        :error ->
+          index = length(requests)
+
+          {requests ++ [%{path: path, source: source, column_field: column_field}],
+           Map.put(indexes, key, index)}
+      end
+    else
+      {requests, indexes}
+    end
+  end
+
+  defp index_load_requests(requests, _indexes) do
+    requests
+    |> Enum.with_index()
+    |> Map.new(fn {request, index} -> {{request.path, request.column_field}, index} end)
+  end
+
   @doc """
   Process filter-only slot definitions into the format expected by the filter system.
   """
