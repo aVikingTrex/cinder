@@ -54,4 +54,56 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     </Cinder.collection>
     """
   end
+
+  setup do
+    artist = generate(artist(name: "Test Artist"))
+    generate(album(title: "Dirt", artist_id: artist.id))
+
+    on_exit(fn ->
+      Ash.bulk_destroy!(Cinder.Integration.Album, :destroy, %{})
+      Ash.bulk_destroy!(Cinder.Integration.Artist, :destroy, %{})
+    end)
+
+    :ok
+  end
+
+  test "infer_loads loads calculations named by column fields", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&inferred_loads_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display)")
+  end
+
+  test "bare load loads the column field", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&field_load_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display)")
+  end
+
+  test "load names a calculation different from the column field", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&named_load_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display)")
+  end
+
+  test "load accepts multiple calculation names", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&multiple_loads_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display) / Dirt (alternate)")
+  end
+
+  test "load accepts a relationship calculation path", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&relationship_load_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Test Artist (display)")
+  end
 end
