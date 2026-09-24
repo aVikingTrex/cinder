@@ -55,6 +55,24 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     """
   end
 
+  defp additive_inferred_and_explicit_loads_collection(assigns) do
+    ~H"""
+    <Cinder.collection
+      resource={Cinder.Integration.Album}
+      url_state={@url_state}
+      infer_loads
+    >
+      <:col
+        :let={album}
+        field="display_title"
+        load="alternate_title"
+      >
+        {album.display_title} / {album.alternate_title}
+      </:col>
+    </Cinder.collection>
+    """
+  end
+
   defp aggregate_load_collection(assigns) do
     ~H"""
     <Cinder.collection resource={Cinder.Integration.Artist} url_state={@url_state}>
@@ -62,6 +80,7 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     </Cinder.collection>
     """
   end
+
   defp direct_relationship_load_collection(assigns) do
     ~H"""
     <Cinder.collection resource={Cinder.Integration.Album} url_state={@url_state}>
@@ -158,6 +177,16 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     |> visit(path)
     |> assert_has("td", text: "Test Artist (display)")
   end
+
+  test "infer_loads and explicit load are additive", %{conn: conn} do
+    path =
+      Cinder.TestLive.Fixture.register(&additive_inferred_and_explicit_loads_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display) / Dirt (alternate)")
+  end
+
   test "load accepts aggregates", %{conn: conn} do
     path = Cinder.TestLive.Fixture.register(&aggregate_load_collection/1)
 
@@ -165,6 +194,7 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     |> visit(path)
     |> assert_has("td", text: "1")
   end
+
   test "load accepts direct relationships", %{conn: conn} do
     path = Cinder.TestLive.Fixture.register(&direct_relationship_load_collection/1)
 
