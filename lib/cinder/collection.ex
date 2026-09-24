@@ -155,6 +155,13 @@ defmodule Cinder.Collection do
     doc: "Additional Ash query options"
   )
 
+  attr(:infer_loads, :boolean,
+    default: false,
+    doc:
+      "Enable loading each column's declared field. Explicit column loads can add " <>
+        "different fields with `load=\"field\"` or paths/combinations with `load={[\"field_a\", \"field_b\"]}`."
+  )
+
   attr(:initial_load, :any,
     default: nil,
     doc:
@@ -279,6 +286,12 @@ defmodule Cinder.Collection do
 
     attr(:sort, :any,
       doc: "Enable sorting (true, false, or unified config [cycle: [nil, :asc, :desc]])"
+    )
+
+    attr(:load, :any,
+      doc:
+        "Load this column's field with `load`, or name fields explicitly with " <>
+          "`load=\"field\"` or path/combination with `load={[\"field_a\", \"field_b\"]}`."
     )
 
     attr(:search, :boolean, doc: "Enable global search on this column")
@@ -620,6 +633,7 @@ defmodule Cinder.Collection do
       # Phoenix's render_slot expects the full slot structure, not just inner_block.
       %{
         field: field,
+        load: Map.get(slot, :load, false),
         label: Map.get(slot, :label, parsed_column.label),
         filterable: parsed_column.filterable,
         filter_type: parsed_column.filter_type,
