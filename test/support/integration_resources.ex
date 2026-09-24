@@ -32,6 +32,10 @@ defmodule Cinder.Integration.Artist do
     attribute(:name, :string)
   end
 
+  calculations do
+    calculate(:display_name, :string, expr(name <> " (display)"))
+  end
+
   relationships do
     has_many(:albums, Cinder.Integration.Album)
   end
@@ -59,6 +63,11 @@ defmodule Cinder.Integration.Album do
     attribute(:release_date, :date)
     attribute(:is_remastered, :boolean)
     attribute(:artist_id, :uuid)
+  end
+
+  calculations do
+    calculate(:display_title, :string, expr(title <> " (display)"))
+    calculate(:alternate_title, :string, expr(title <> " (alternate)"))
   end
 
   relationships do
