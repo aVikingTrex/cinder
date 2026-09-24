@@ -88,6 +88,28 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     </Cinder.collection>
     """
   end
+
+  defp query_and_query_opts_loads_collection(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :query,
+        Ash.Query.load(Cinder.Integration.Album, :display_title)
+      )
+
+    ~H"""
+    <Cinder.collection
+      query={@query}
+      url_state={@url_state}
+      query_opts={[load: [:alternate_title]]}
+    >
+      <:col :let={album} field="title">
+        {album.display_title} / {album.alternate_title}
+      </:col>
+    </Cinder.collection>
+    """
+  end
+
   defp duplicate_loads_collection(assigns) do
     assigns =
       assigns
@@ -202,6 +224,15 @@ defmodule Cinder.Integration.InferredCalculationLoadsTest do
     |> visit(path)
     |> assert_has("td", text: "Test Artist")
   end
+
+  test "loads from a query and query_opts are additive", %{conn: conn} do
+    path = Cinder.TestLive.Fixture.register(&query_and_query_opts_loads_collection/1)
+
+    conn
+    |> visit(path)
+    |> assert_has("td", text: "Dirt (display) / Dirt (alternate)")
+  end
+
   test "duplicate paths across query, query_opts, infer_loads, and load are deduplicated", %{
     conn: conn
   } do
